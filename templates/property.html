@@ -1,1 +1,8 @@
-{% extends'base.html'%}{% block body %}<h1>Property & mortgage</h1><form method="post" class="form panel">{% for n,l,t in [('name','Property name','text'),('address','Address','text'),('purchase_price','Purchase price','number'),('original_loan','Original loan','number'),('interest_rate','Interest rate (%)','number'),('term_years','Term years','number'),('loan_start_date','First payment month','date'),('extra_payment','Initial extra payment','number')] %}<label>{{l}}<input name="{{n}}" type="{{t}}" step="any" required value="{{p[n] if p else('30' if n=='term_years' else'0' if n=='extra_payment' else'')}}"></label>{% endfor %}<button>Save</button></form>{% endblock %}
+{% extends'base.html'%}{% block body %}<h1>Property & mortgage</h1>
+<form method="post" class="form panel">{% for n,l,t in [('name','Property
+    name','text'),('address','Address','text'),('purchase_price','Purchase price','number'),('original_loan','Original
+    loan','number'),('interest_rate','Interest rate (%)','number'),('term_years','Term
+    years','number'),('loan_start_date','First payment month','date'),('extra_payment','Initial extra
+    payment','number')] %}<label>{{l}}<input name="{{n}}" type="{{t}}" step="any" required
+            value="{{p[n] if p else('30' if n=='term_years' else'0' if n=='extra_payment' else'')}}"></label>{% endfor
+    %}<button>Save</button></form>{% endblock %}

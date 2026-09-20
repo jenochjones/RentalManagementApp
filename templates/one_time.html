@@ -1,1 +1,23 @@
-{% extends'base.html'%}{% block body %}<h1>One-time costs</h1><form method="post" class="form panel"><label>Category<input name="category" required></label><label>Description<input name="description"></label><label>Amount<input type="number" step=".01" name="amount" required></label><label>Date<input type="date" name="cost_date" required></label><button>Add</button></form><section class="panel"><table><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th></tr>{% for r in rows %}<tr><td>{{r.cost_date}}</td><td>{{r.category}}</td><td>{{r.description}}</td><td>{{r.amount|money}}</td><td><form method="post" action="/one-time/{{r.id}}/delete"><button class="danger">Delete</button></form></td></tr>{% endfor %}</table></section>{% endblock %}
+{% extends'base.html'%}{% block body %}<h1>One-time costs</h1>
+<form method="post" class="form panel"><label>Category<input name="category" required></label><label>Description<input
+            name="description"></label><label>Amount<input type="number" step=".01" name="amount"
+            required></label><label>Date<input type="date" name="cost_date" required></label><button>Add</button></form>
+<section class="panel">
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th></th>
+        </tr>{% for r in rows %}<tr>
+            <td>{{r.cost_date}}</td>
+            <td>{{r.category}}</td>
+            <td>{{r.description}}</td>
+            <td>{{r.amount|money}}</td>
+            <td>
+                <form method="post" action="/one-time/{{r.id}}/delete"><button class="danger">Delete</button></form>
+            </td>
+        </tr>{% endfor %}
+    </table>
+</section>{% endblock %}

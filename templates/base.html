@@ -1,1 +1,18 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Rental Tracker</title><link rel="stylesheet" href="{{url_for('static',filename='style.css')}}"></head><body><nav><a href="/" class="brand">Rental Tracker</a><a href="/property">Property</a><a href="/one-time">One-time costs</a><a href="/recurring">Income & expenses</a><a href="/mortgage-changes">Mortgage changes</a><a href="/amortization">Amortization</a></nav><main>{% block body %}{% endblock %}</main></body></html>
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Rental Tracker</title>
+    <link rel="stylesheet" href="{{url_for('static',filename='style.css')}}">
+</head>
+
+<body>
+    <nav><a href="/" class="brand">Rental Tracker</a><a href="/property">Property</a><a href="/one-time">One-time
+            costs</a><a href="/recurring">Income & expenses</a><a href="/mortgage-changes">Mortgage changes</a><a
+            href="/amortization">Amortization</a></nav>
+    <main>{% block body %}{% endblock %}</main>
+</body>
+
+</html>

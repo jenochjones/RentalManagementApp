@@ -460,82 +460,9 @@ def graphs_page():
         original=original_ser,
     )
 
-
 @app.route("/amortization")
-def amortization_page():
-    p, items, costs, rows = data()
-
-    original = []
-
-    if p:
-        # amortize against a fake DB with no changes to get the original schedule
-        original = amortize(p, _NoChangeDB())
-        original = enrich(original, items, costs)
-
-    # rows already include enrich() from data()
-    rows_ser = _serialize_schedule(rows)
-    original_ser = _serialize_schedule(original)
-
-    return render_template(
-        "amortization.html",
-        p=p,
-        rows=rows_ser,
-        original=original_ser,
-    )
-
-
-@app.post("/amortization/add_payment")
-def amortization_add_payment():
-    """Add an ongoing or one-time extra payment via mortgage_change entries.
-
-    Form fields:
-    - kind: 'one-time' or 'ongoing'
-    - amount: numeric
-    - effective_date: YYYY-MM-DD (month)
-    - note: optional
-    """
-    kind = request.form.get("kind")
-    amount = float(request.form.get("amount") or 0)
-    when = request.form.get("effective_date")
-    note = request.form.get("note") or "added from amortization page"
-
-    if not when or amount <= 0 or kind not in ("one-time", "ongoing"):
-        return redirect(url_for("amortization_page"))
-
-    d = db()
-    p = prop()
-    base_extra = float(p.get("extra_payment") or 0)
-
-    # Determine previous active extra at that date
-    prev_extra = _get_prev_extra_for_date(d, when, base_extra)
-
-    if kind == "ongoing":
-        # Insert a mortgage_change that sets extra_payment to prev_extra + amount
-        d.execute(
-            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
-            (when, prev_extra + amount, note),
-        )
-    else:
-        # one-time: set extra to prev_extra + amount on effective month, then
-        # reset to prev_extra on the following month
-        from datetime import date
-
-        eff = month_start(when)
-        next_month = add_month(eff)
-
-        d.execute(
-            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
-            (eff.isoformat(), prev_extra + amount, note),
-        )
-
-        d.execute(
-            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
-            (next_month.isoformat(), prev_extra, f"reset after one-time: {note}"),
-        )
-
-    d.commit()
-
-    return redirect(url_for("amortization_page"))
+def schedule():
+    return render_template("schedule.html", rows=data()[3])
 
 
 @app.template_filter("money")

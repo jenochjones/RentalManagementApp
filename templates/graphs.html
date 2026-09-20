@@ -1,111 +1,189 @@
 {% extends 'base.html' %}
+
 {% block body %}
+
 <h1>Graphs</h1>
+
 <div class="panel">
-  <p>Compare the original amortization schedule against the current schedule, along with the running net income/loss trend.</p>
-  <canvas id="amChart" width="1000" height="500"></canvas>
+<div id="amChart" style="width: 100%; height: 500px;"></div>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<!-- Plotly -->
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
 <script>
-const original = {{ original|tojson|safe }};
-const modified = {{ rows|tojson|safe }};
+    // Data supplied by Flask/Jinja
+    const original = {{ original|tojson|safe }};
+    const modified = {{ rows|tojson|safe }};
 
-function buildSeries(data, field) {
-  return (data || []).map(r => ({ x: r.date, y: Number(r[field] || 0) }));
-}
+    console.log('original:', original);
+    console.log('modified:', modified);
 
-const ctx = document.getElementById('amChart').getContext('2d');
 
-new Chart(ctx, {
-  type: 'line',
-  data: {
-    datasets: [
-      {
-        label: 'Balance (current schedule)',
-        data: buildSeries(modified, 'balance'),
-        borderColor: 'rgba(75,192,192,1)',
-        backgroundColor: 'rgba(75,192,192,0.1)',
-        parsing: false,
-        tension: 0.2,
-      },
-      {
-        label: 'Balance (original)',
-        data: buildSeries(original, 'balance'),
-        borderColor: 'rgba(192,75,75,1)',
-        backgroundColor: 'rgba(192,75,75,0.1)',
-        borderDash: [6,4],
-        parsing: false,
-        tension: 0.2,
-      },
-      {
-        label: 'Running net income/loss',
-        data: buildSeries(modified, 'running'),
-        borderColor: 'rgba(75,75,192,1)',
-        backgroundColor: 'rgba(75,75,192,0.05)',
-        parsing: false,
-        tension: 0.2,
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: {
-        type: 'time',
-        time: {
-          unit: 'month',
-          tooltipFormat: 'MMM yyyy',
-          displayFormats: {
-            month: 'MMM yyyy'
-          }
-        },
-        ticks: {
-          autoSkip: true,
-          maxRotation: 0,
-          callback: function(value, index, ticks) {
-            const date = this.getLabelForValue(value);
-            return date;
-          }
-        },
-        adapters: {
-          date: { zone: 'UTC' }
-        },
-        title: {
-          display: true,
-          text: 'Date (Month Year)'
-        }
-      },
-      y: {
-        title: { display: true, text: 'Amount ($)' },
-        ticks: {
-          callback: function(value) {
-            return '$' + Number(value).toLocaleString(undefined, { maximumFractionDigits: 0 });
-          }
-        }
-      }
-    },
-    interaction: {
-      mode: 'index',
-      intersect: false,
-    },
-    plugins: {
-      tooltip: {
-        callbacks: {
-          title: function(context) {
-            const dt = new Date(context[0].parsed.x);
-            return dt.toLocaleString(undefined, { month: 'short', year: 'numeric' });
-          },
-          label: function(context) {
-            const v = context.parsed.y;
-            return context.dataset.label + ': $' + Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-          }
-        }
-      }
+    /*
+     * Convert a list of amortization records into
+     * separate X and Y arrays for Plotly.
+     */
+    function buildSeries(data, field) {
+        data = data || [];
+
+        return {
+            x: data.map(row => row.date),
+            y: data.map(row => Number(row[field] ?? 0))
+        };
     }
-  }
-});
+
+
+    /*
+     * Build the data series.
+     */
+    const currentBalance = buildSeries(modified, 'balance');
+    const originalBalance = buildSeries(original, 'balance');
+    const runningIncome = buildSeries(modified, 'running');
+
+
+    /*
+     * Define the Plotly traces.
+     */
+    const traces = [
+        {
+            x: currentBalance.x,
+            y: currentBalance.y,
+
+            type: 'scatter',
+            mode: 'lines',
+
+            name: 'Balance (current schedule)',
+
+            line: {
+                color: 'rgba(75, 192, 192, 1)',
+                width: 2
+            },
+
+            hovertemplate:
+                '<b>%{x|%b %Y}</b><br>' +
+                'Balance (current): $%{y:,.2f}' +
+                '<extra></extra>'
+        },
+
+        {
+            x: originalBalance.x,
+            y: originalBalance.y,
+
+            type: 'scatter',
+            mode: 'lines',
+
+            name: 'Balance (original)',
+
+            line: {
+                color: 'rgba(192, 75, 75, 1)',
+                width: 2,
+                dash: 'dash'
+            },
+
+            hovertemplate:
+                '<b>%{x|%b %Y}</b><br>' +
+                'Balance (original): $%{y:,.2f}' +
+                '<extra></extra>'
+        },
+
+        {
+            x: runningIncome.x,
+            y: runningIncome.y,
+
+            type: 'scatter',
+            mode: 'lines',
+
+            name: 'Running net income/loss',
+
+            line: {
+                color: 'rgba(75, 75, 192, 1)',
+                width: 2
+            },
+
+            hovertemplate:
+                '<b>%{x|%b %Y}</b><br>' +
+                'Running net income/loss: $%{y:,.2f}' +
+                '<extra></extra>'
+        }
+    ];
+
+
+    /*
+     * Configure the graph layout.
+     */
+    const layout = {
+        margin: {
+            l: 80,
+            r: 30,
+            t: 30,
+            b: 80
+        },
+
+        xaxis: {
+            title: {
+                text: 'Date (Month Year)'
+            },
+
+            type: 'date',
+
+            tickformat: '%b %Y',
+
+            tickangle: 0,
+
+            showgrid: true
+        },
+
+        yaxis: {
+            title: {
+                text: 'Amount ($)'
+            },
+
+            tickprefix: '$',
+
+            tickformat: ',.0f',
+
+            showgrid: true
+        },
+
+        hovermode: 'x unified',
+
+        legend: {
+            orientation: 'h',
+
+            y: -0.2,
+
+            x: 0
+        }
+    };
+
+
+    /*
+     * Configure Plotly controls.
+     */
+    const config = {
+        responsive: true,
+
+        displaylogo: false,
+
+        modeBarButtonsToRemove: [
+            'lasso2d',
+            'select2d'
+        ]
+    };
+
+
+    /*
+     * Create the graph.
+     */
+    Plotly.newPlot(
+        'amChart',
+        traces,
+        layout,
+        config
+    );
 </script>
+
 {% endblock %}

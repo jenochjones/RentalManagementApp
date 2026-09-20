@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block body %}
+<h1>Interactive Amortization</h1>
+<div class="panel">
+  <p>Use the form below to add an extra payment (one-time or ongoing). The chart shows original schedule (no mortgage changes), current schedule (with mortgage changes and extras), and running net income/loss.</p>
+
+  <form id="extraForm" method="post" action="/amortization/add_payment" class="form">
+    <label>Type
+      <select name="kind">
+        <option value="one-time">One-time</option>
+        <option value="ongoing">Ongoing</option>
+      </select>
+    </label>
+    <label>Amount
+      <input name="amount" type="number" step="0.01" required>
+    </label>
+    <label>Effective month
+      <input name="effective_date" type="month" required>
+    </label>
+    <label>Note
+      <input name="note" type="text">
+    </label>
+    <button type="submit">Add payment</button>
+  </form>
+</div>
+
+<div class="panel">
+  <canvas id="amChart" width="800" height="400"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const original = {{ original|tojson|safe }};
+const modified = {{ rows|tojson|safe }};
+
+function toLabel(d) {
+  // d is ISO date like YYYY-MM-DD
+  const dt = new Date(d);
+  return dt.toLocaleString(undefined, { month: 'short', year: 'numeric' });
+}
+
+function buildSeries(data, field) {
+  return data.map(r => ({ x: r.date, y: r[field] }));
+}
+
+const labels = (modified.length ? modified : original).map(r => r.date);
+
+const ctx = document.getElementById('amChart').getContext('2d');
+
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    datasets: [
+      {
+        label: 'Balance (current schedule)',
+        data: buildSeries(modified, 'balance'),
+        borderColor: 'rgba(75,192,192,1)',
+        backgroundColor: 'rgba(75,192,192,0.1)',
+        parsing: false,
+        tension: 0.2,
+      },
+      {
+        label: 'Balance (original)',
+        data: buildSeries(original, 'balance'),
+        borderColor: 'rgba(192,75,75,1)',
+        backgroundColor: 'rgba(192,75,75,0.1)',
+        borderDash: [6,4],
+        parsing: false,
+        tension: 0.2,
+      },
+      {
+        label: 'Running net income/loss',
+        data: buildSeries(modified, 'running'),
+        borderColor: 'rgba(75,75,192,1)',
+        backgroundColor: 'rgba(75,75,192,0.05)',
+        parsing: false,
+        yAxisID: 'net',
+        tension: 0.2,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      x: {
+        type: 'time',
+        time: {
+          unit: 'month',
+          tooltipFormat: 'MMM yyyy',
+        },
+        adapters: {
+          date: {
+            zone: 'UTC'
+          }
+        }
+      },
+      y: {
+        title: { display: true, text: 'Balance / Dollars' }
+      },
+      net: {
+        position: 'right',
+        title: { display: true, text: 'Running net' },
+        grid: { drawOnChartArea: false }
+      }
+    },
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            const v = context.parsed.y;
+            return context.dataset.label + ': $' + Number(v).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+          }
+        }
+      }
+    }
+  }
+});
+
+// Update form effective_date input format (month input -> YYYY-MM-01 iso)
+document.getElementById('extraForm').addEventListener('submit', function(e){
+  const monthInput = this.querySelector('input[name="effective_date"]');
+  // month input returns YYYY-MM; convert to YYYY-MM-01 for server
+  if (monthInput && monthInput.value) {
+    monthInput.value = monthInput.value + '-01';
+  }
+});
+</script>
+
+{% endblock %}

@@ -9,9 +9,10 @@ from flask import (
     render_template,
     request,
     url_for,
+    jsonify,
 )
 
-from mortgage import amortize, month_start
+from mortgage import amortize, month_start, add_month
 
 
 ROOT = Path(__file__).parent
@@ -389,12 +390,131 @@ def del_change(i):
     return redirect(url_for("changes"))
 
 
+class _NoChangeDB:
+    """Small fake DB object that returns no mortgage_change rows.
+
+    Used to compute the original amortization schedule as if no mortgage
+    changes were ever applied.
+    """
+
+    def execute(self, *_args, **_kwargs):
+        class _R:
+            def fetchall(self):
+                return []
+
+        return _R()
+
+
+def _get_prev_extra_for_date(d, when, base_extra):
+    """Find the extra_payment that would be active on `when`.
+
+    d is a sqlite3 connection (db()).
+    """
+    rows = d.execute(
+        "select * from mortgage_change order by effective_date, id"
+    ).fetchall()
+
+    prev = base_extra
+
+    for r in rows:
+        if month_start(r["effective_date"]) <= month_start(when):
+            if r["extra_payment"] is not None:
+                prev = r["extra_payment"]
+        else:
+            break
+
+    return prev
+
+
+def _serialize_schedule(schedule):
+    out = []
+
+    for r in schedule:
+        # create a shallow serializable copy
+        rr = dict(r)
+        d = rr.get("date")
+        if hasattr(d, "isoformat"):
+            rr["date"] = d.isoformat()
+        out.append(rr)
+
+    return out
+
+
 @app.route("/amortization")
-def schedule():
+def amortization_page():
+    p, items, costs, rows = data()
+
+    original = []
+
+    if p:
+        # amortize against a fake DB with no changes to get the original schedule
+        original = amortize(p, _NoChangeDB())
+        original = enrich(original, items, costs)
+
+    # rows already include enrich() from data()
+    rows_ser = _serialize_schedule(rows)
+    original_ser = _serialize_schedule(original)
+
     return render_template(
-        "schedule.html",
-        rows=data()[3],
+        "amortization.html",
+        p=p,
+        rows=rows_ser,
+        original=original_ser,
     )
+
+
+@app.post("/amortization/add_payment")
+def amortization_add_payment():
+    """Add an ongoing or one-time extra payment via mortgage_change entries.
+
+    Form fields:
+    - kind: 'one-time' or 'ongoing'
+    - amount: numeric
+    - effective_date: YYYY-MM-DD (month)
+    - note: optional
+    """
+    kind = request.form.get("kind")
+    amount = float(request.form.get("amount") or 0)
+    when = request.form.get("effective_date")
+    note = request.form.get("note") or "added from amortization page"
+
+    if not when or amount <= 0 or kind not in ("one-time", "ongoing"):
+        return redirect(url_for("amortization_page"))
+
+    d = db()
+    p = prop()
+    base_extra = float(p.get("extra_payment") or 0)
+
+    # Determine previous active extra at that date
+    prev_extra = _get_prev_extra_for_date(d, when, base_extra)
+
+    if kind == "ongoing":
+        # Insert a mortgage_change that sets extra_payment to prev_extra + amount
+        d.execute(
+            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
+            (when, prev_extra + amount, note),
+        )
+    else:
+        # one-time: set extra to prev_extra + amount on effective month, then
+        # reset to prev_extra on the following month
+        from datetime import date
+
+        eff = month_start(when)
+        next_month = add_month(eff)
+
+        d.execute(
+            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
+            (eff.isoformat(), prev_extra + amount, note),
+        )
+
+        d.execute(
+            "insert into mortgage_change (effective_date, extra_payment, note) values (?, ?, ?)",
+            (next_month.isoformat(), prev_extra, f"reset after one-time: {note}"),
+        )
+
+    d.commit()
+
+    return redirect(url_for("amortization_page"))
 
 
 @app.template_filter("money")

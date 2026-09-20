@@ -1,43 +1,16 @@
 {% extends 'base.html' %}
 {% block body %}
-<h1>Interactive Amortization</h1>
+<h1>Graphs</h1>
 <div class="panel">
-  <p>Use the form below to add an extra payment (one-time or ongoing). The chart shows original schedule (no mortgage changes), current schedule (with mortgage changes and extras), and running net income/loss.</p>
-
-  <form id="extraForm" method="post" action="/amortization/add_payment" class="form">
-    <label>Type
-      <select name="kind">
-        <option value="one-time">One-time</option>
-        <option value="ongoing">Ongoing</option>
-      </select>
-    </label>
-    <label>Amount
-      <input name="amount" type="number" step="0.01" required>
-    </label>
-    <label>Effective month
-      <input name="effective_date" type="month" required>
-    </label>
-    <label>Note
-      <input name="note" type="text">
-    </label>
-    <button type="submit">Add payment</button>
-  </form>
-</div>
-
-<div class="panel">
-  <canvas id="amChart" width="800" height="400"></canvas>
+  <p>Compare the original amortization schedule against the current schedule, along with the running net income/loss trend.</p>
+  <canvas id="amChart" width="1000" height="500"></canvas>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script>
 const original = {{ original|tojson|safe }};
 const modified = {{ rows|tojson|safe }};
-
-function toLabel(d) {
-  // d is ISO date like YYYY-MM-DD
-  const dt = new Date(d);
-  return dt.toLocaleString(undefined, { month: 'short', year: 'numeric' });
-}
 
 function buildSeries(data, field) {
   return (data || []).map(r => ({ x: r.date, y: Number(r[field] || 0) }));
@@ -45,7 +18,7 @@ function buildSeries(data, field) {
 
 const ctx = document.getElementById('amChart').getContext('2d');
 
-const chart = new Chart(ctx, {
+new Chart(ctx, {
   type: 'line',
   data: {
     datasets: [
@@ -92,14 +65,13 @@ const chart = new Chart(ctx, {
         ticks: {
           autoSkip: true,
           maxRotation: 0,
-          callback: function(value) {
-            return this.getLabelForValue(value);
+          callback: function(value, index, ticks) {
+            const date = this.getLabelForValue(value);
+            return date;
           }
         },
         adapters: {
-          date: {
-            zone: 'UTC'
-          }
+          date: { zone: 'UTC' }
         },
         title: {
           display: true,
@@ -135,15 +107,5 @@ const chart = new Chart(ctx, {
     }
   }
 });
-
-// Update form effective_date input format (month input -> YYYY-MM-01 iso)
-document.getElementById('extraForm').addEventListener('submit', function(e){
-  const monthInput = this.querySelector('input[name="effective_date"]');
-  // month input returns YYYY-MM; convert to YYYY-MM-01 for server
-  if (monthInput && monthInput.value) {
-    monthInput.value = monthInput.value + '-01';
-  }
-});
 </script>
-
 {% endblock %}

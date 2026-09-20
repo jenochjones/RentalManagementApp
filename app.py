@@ -440,6 +440,27 @@ def _serialize_schedule(schedule):
     return out
 
 
+@app.route("/graphs")
+def graphs_page():
+    p, items, costs, rows = data()
+
+    original = []
+
+    if p:
+        original = amortize(p, _NoChangeDB())
+        original = enrich(original, items, costs)
+
+    rows_ser = _serialize_schedule(rows)
+    original_ser = _serialize_schedule(original)
+
+    return render_template(
+        "graphs.html",
+        p=p,
+        rows=rows_ser,
+        original=original_ser,
+    )
+
+
 @app.route("/amortization")
 def amortization_page():
     p, items, costs, rows = data()

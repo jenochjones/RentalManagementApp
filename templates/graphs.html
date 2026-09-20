@@ -4,9 +4,8 @@
 
 <h1>Graphs</h1>
 
-<div class="panel">
-<div id="amChart" style="width: 100%; height: 500px;"></div>
-
+<div class="panel graph-shell">
+    <div id="amChart" style="width: 100%; height: 500px;"></div>
 </div>
 
 <!-- Plotly -->
@@ -184,6 +183,10 @@
         layout,
         config
     );
+
+    window.addEventListener('resize', function() {
+        Plotly.Plots.resize('amChart');
+    });
 </script>
 
 {% endblock %}

@@ -4,22 +4,23 @@
         extra payment<input type="number" step=".01" name="extra_payment"></label><label>Note<input
             name="note"></label><button>Add</button></form>
 <section class="panel">
-    <table>
-        <tr>
-            <th>Date</th>
-            <th>Rate</th>
-            <th>Extra</th>
-            <th>Note</th>
-            <th></th>
-        </tr>{% for r in rows %}<tr>
-            <td>{{r.effective_date}}</td>
-            <td>{{r.interest_rate if r.interest_rate is not none else'unchanged'}}</td>
-            <td>{{r.extra_payment|money if r.extra_payment is not none else'unchanged'}}</td>
-            <td>{{r.note}}</td>
-            <td>
-                <form method="post" action="/mortgage-changes/{{r.id}}/delete"><button class="danger">Delete</button>
-                </form>
-            </td>
-        </tr>{% endfor %}
-    </table>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Rate</th>
+                <th>Extra</th>
+                <th>Note</th>
+                <th></th>
+            </tr>{% for r in rows %}<tr>
+                <td>{{r.effective_date}}</td>
+                <td>{{r.interest_rate if r.interest_rate is not none else'unchanged'}}</td>
+                <td>{{r.extra_payment|money if r.extra_payment is not none else'unchanged'}}</td>
+                <td>{{r.note}}</td>
+                <td>
+                    <div class="actions"><form method="post" action="/mortgage-changes/{{r.id}}/delete"><button class="danger">Delete</button></form></div>
+                </td>
+            </tr>{% endfor %}
+        </table>
+    </div>
 </section>{% endblock %}

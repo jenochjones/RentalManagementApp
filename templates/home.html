@@ -10,19 +10,21 @@
     excluded because it builds equity.</p>
 <section class="panel">
     <h2>Next 12 payments from the current month</h2>
-    <table>
-        <tr>
-            <th>Date</th>
-            <th>Payment</th>
-            <th>Principal</th>
-            <th>Interest</th>
-            <th>Balance</th>
-        </tr>{% for r in rows %}<tr>
-            <td>{{r.date.strftime('%b %Y')}}</td>
-            <td>{{r.payment|money}}</td>
-            <td>{{r.principal|money}}</td>
-            <td>{{r.interest|money}}</td>
-            <td>{{r.balance|money}}</td>
-        </tr>{% endfor %}
-    </table>
+    <div class="table-wrap">
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Payment</th>
+                <th>Principal</th>
+                <th>Interest</th>
+                <th>Balance</th>
+            </tr>{% for r in rows %}<tr>
+                <td>{{r.date.strftime('%b %Y')}}</td>
+                <td>{{r.payment|money}}</td>
+                <td>{{r.principal|money}}</td>
+                <td>{{r.interest|money}}</td>
+                <td>{{r.balance|money}}</td>
+            </tr>{% endfor %}
+        </table>
+    </div>
 </section>{% endif %}{% endblock %}

@@ -38,6 +38,16 @@ def close(_=None):
 
 def init():
     db().executescript((ROOT / "schema.sql").read_text())
+
+    cols = {
+        r[1]
+        for r in db().execute("pragma table_info(mortgage_change)").fetchall()
+    }
+    if "extra_payment_kind" not in cols:
+        db().execute(
+            "alter table mortgage_change add column extra_payment_kind text default 'monthly'"
+        )
+
     db().commit()
 
 
@@ -345,9 +355,10 @@ def changes():
                 effective_date,
                 interest_rate,
                 extra_payment,
+                extra_payment_kind,
                 note
             )
-            values (?, ?, ?, ?)
+            values (?, ?, ?, ?, ?)
             """,
             (
                 request.form["effective_date"],
@@ -361,6 +372,7 @@ def changes():
                     if request.form.get("extra_payment")
                     else None
                 ),
+                request.form.get("extra_payment_kind") or "monthly",
                 request.form["note"],
             ),
         )
@@ -406,7 +418,7 @@ class _NoChangeDB:
 
 
 def _get_prev_extra_for_date(d, when, base_extra):
-    """Find the extra_payment that would be active on `when`.
+    """Find the recurring extra_payment that would be active on `when`.
 
     d is a sqlite3 connection (db()).
     """
@@ -418,7 +430,10 @@ def _get_prev_extra_for_date(d, when, base_extra):
 
     for r in rows:
         if month_start(r["effective_date"]) <= month_start(when):
-            if r["extra_payment"] is not None:
+            if (
+                r["extra_payment"] is not None
+                and (r.get("extra_payment_kind") or "monthly") == "monthly"
+            ):
                 prev = r["extra_payment"]
         else:
             break

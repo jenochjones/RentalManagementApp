@@ -108,6 +108,7 @@ def amortize(prop, db):
 
     for payment_number in range(1, term_months + 1):
         rate_changed = False
+        month_extra = extra
 
         #
         # Apply changes effective during this month.
@@ -130,7 +131,16 @@ def amortize(prop, db):
                     rate_changed = True
 
             if change["extra_payment"] is not None:
-                extra = money(change["extra_payment"])
+                kind = (
+                    change["extra_payment_kind"]
+                    if change["extra_payment_kind"] is not None
+                    else "monthly"
+                )
+                if kind == "monthly":
+                    extra = money(change["extra_payment"])
+                    month_extra = extra
+                else:
+                    month_extra += money(change["extra_payment"])
 
             change_index += 1
 
@@ -166,7 +176,7 @@ def amortize(prop, db):
         )
 
         scheduled_payment = money(
-            regular_payment + extra
+            regular_payment + month_extra
         )
 
         payoff_amount = money(

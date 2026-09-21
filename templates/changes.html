@@ -1,7 +1,8 @@
 {% extends'base.html'%}{% block body %}<h1>Mortgage changes</h1>
 <form method="post" class="form panel"><label>Effective date<input type="date" name="effective_date"
-            required></label><label>New rate (%)<input type="number" step="any" name="interest_rate"></label><label>New
-        extra payment<input type="number" step=".01" name="extra_payment"></label><label>Note<input
+            required></label><label>New rate (%)<input type="number" step="any" name="interest_rate"></label><label>Extra
+        payment<input type="number" step=".01" name="extra_payment"></label><label>Payment type<select
+            name="extra_payment_kind"><option value="monthly">Recurring monthly</option><option value="one_time">One-time payment</option></select></label><label>Note<input
             name="note"></label><button>Add</button></form>
 <section class="panel">
     <div class="table-wrap">
@@ -10,12 +11,14 @@
                 <th>Date</th>
                 <th>Rate</th>
                 <th>Extra</th>
+                <th>Type</th>
                 <th>Note</th>
                 <th></th>
             </tr>{% for r in rows %}<tr>
                 <td>{{r.effective_date}}</td>
                 <td>{{r.interest_rate if r.interest_rate is not none else'unchanged'}}</td>
                 <td>{{r.extra_payment|money if r.extra_payment is not none else'unchanged'}}</td>
+                <td>{{r.extra_payment_kind if r.extra_payment_kind is not none else 'monthly'}}</td>
                 <td>{{r.note}}</td>
                 <td>
                     <div class="actions"><form method="post" action="/mortgage-changes/{{r.id}}/delete"><button class="danger">Delete</button></form></div>
